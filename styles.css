@@ -88,6 +88,34 @@ nav a[aria-current="page"] {
   text-align: center;
 }
 
+.custom-text .hero-copy {
+  color: var(--section-text-color, #ffffff);
+}
+
+.custom-text {
+  color: var(--section-text-color, inherit);
+}
+
+.custom-text h1,
+.custom-text h2 {
+  font-size: var(--section-title-size, inherit);
+}
+
+.custom-text p,
+.custom-text label,
+.custom-text input,
+.custom-text textarea {
+  font-size: var(--section-body-size, inherit);
+}
+
+.custom-text .section-heading p,
+.custom-text > p,
+.custom-text .feature-grid p,
+.custom-text .split-section p,
+.custom-text.contact-section .section-heading p {
+  color: var(--section-text-color, var(--muted));
+}
+
 .eyebrow {
   margin: 0 0 12px;
   color: var(--warm);

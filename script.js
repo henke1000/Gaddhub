@@ -25,6 +25,24 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#039;");
 }
 
+function styleValue(value = "") {
+  const safe = String(value).trim();
+  return /^[#a-zA-Z0-9(),. %/-]+$/.test(safe) ? safe : "";
+}
+
+function sectionStyle(section) {
+  const styles = [];
+  const textColor = styleValue(section.textColor);
+  const titleSize = styleValue(section.titleSize);
+  const bodySize = styleValue(section.bodySize);
+
+  if (textColor) styles.push(`--section-text-color: ${textColor}`);
+  if (titleSize) styles.push(`--section-title-size: ${titleSize}`);
+  if (bodySize) styles.push(`--section-body-size: ${bodySize}`);
+
+  return styles.length ? ` style="${styles.join("; ")}"` : "";
+}
+
 function pageHref(slug) {
   return slug === "hem" ? "/" : `/?page=${encodeURIComponent(slug)}`;
 }
@@ -74,13 +92,16 @@ function renderNav(pages, activeSlug) {
 
 function renderHero(section) {
   const image = section.image || "";
-  const style = image ? ` style="background-image: linear-gradient(rgba(31,41,51,.28), rgba(31,41,51,.34)), url('${escapeHtml(image)}')"` : "";
+  const customStyles = sectionStyle(section).replace(/^ style="/, "").replace(/"$/, "");
+  const background = image ? `background-image: linear-gradient(rgba(31,41,51,.28), rgba(31,41,51,.34)), url('${escapeHtml(image)}')` : "";
+  const styleParts = [background, customStyles].filter(Boolean).join("; ");
+  const style = styleParts ? ` style="${styleParts}"` : "";
   const button = section.buttonText
     ? `<a class="button primary" href="${escapeHtml(section.buttonHref || "#")}">${escapeHtml(section.buttonText)}</a>`
     : "";
 
   return `
-    <section class="hero cms-hero"${style}>
+    <section class="hero cms-hero custom-text"${style}>
       <div class="hero-copy ${escapeHtml(section.align || "left")}">
         ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
         <h1>${escapeHtml(section.title || "")}</h1>
@@ -93,7 +114,7 @@ function renderHero(section) {
 
 function renderText(section) {
   return `
-    <section class="section text-section ${escapeHtml(section.layout || "narrow")}">
+    <section class="section text-section custom-text ${escapeHtml(section.layout || "narrow")}"${sectionStyle(section)}>
       <div class="section-heading">
         ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
         <h2>${escapeHtml(section.title || "")}</h2>
@@ -105,7 +126,7 @@ function renderText(section) {
 
 function renderImage(section) {
   return `
-    <section class="section image-section ${escapeHtml(section.layout || "wide")}">
+    <section class="section image-section custom-text ${escapeHtml(section.layout || "wide")}"${sectionStyle(section)}>
       <figure>
         <img src="${escapeHtml(section.image || "")}" alt="${escapeHtml(section.alt || "")}" />
         ${section.caption ? `<figcaption>${escapeHtml(section.caption)}</figcaption>` : ""}
@@ -116,7 +137,7 @@ function renderImage(section) {
 
 function renderSplit(section) {
   return `
-    <section class="section split-section ${section.imageSide === "left" ? "image-left" : ""}">
+    <section class="section split-section custom-text ${section.imageSide === "left" ? "image-left" : ""}"${sectionStyle(section)}>
       <div>
         ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
         <h2>${escapeHtml(section.title || "")}</h2>
@@ -130,7 +151,7 @@ function renderSplit(section) {
 function renderCards(section) {
   const cards = Array.isArray(section.cards) ? section.cards : [];
   return `
-    <section class="section">
+    <section class="section custom-text"${sectionStyle(section)}>
       <div class="section-heading">
         ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
         <h2>${escapeHtml(section.title || "")}</h2>
@@ -155,7 +176,7 @@ function renderCards(section) {
 
 function renderContact(section) {
   return `
-    <section class="section contact-section">
+    <section class="section contact-section custom-text"${sectionStyle(section)}>
       <div class="section-heading">
         ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
         <h2>${escapeHtml(section.title || "Kontakt")}</h2>

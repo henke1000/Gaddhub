@@ -41,19 +41,23 @@ function slugify(value) {
 }
 
 function blockTemplate(type) {
+  const style = { textColor: "", titleSize: "", bodySize: "" };
   const templates = {
-    hero: { type, eyebrow: "Ny sektion", title: "Stor rubrik", text: "Skriv din text har.", image: "", align: "left", buttonText: "", buttonHref: "" },
-    text: { type, eyebrow: "", title: "Rubrik", text: "Skriv din text har.", layout: "narrow" },
-    image: { type, image: "", alt: "", caption: "", layout: "wide" },
-    split: { type, eyebrow: "", title: "Rubrik", text: "Skriv din text har.", image: "", alt: "", imageSide: "right" },
-    cards: { type, eyebrow: "", title: "Kortsektion", cards: [{ title: "Kort 1", text: "Text" }, { title: "Kort 2", text: "Text" }, { title: "Kort 3", text: "Text" }] },
-    contact: { type, eyebrow: "Kontakt", title: "Kontakta mig", text: "Skriv en kort introduktion.", email: "din-epost@example.com" }
+    hero: { type, ...style, eyebrow: "Ny sektion", title: "Stor rubrik", text: "Skriv din text har.", image: "", align: "left", buttonText: "", buttonHref: "" },
+    text: { type, ...style, eyebrow: "", title: "Rubrik", text: "Skriv din text har.", layout: "narrow" },
+    image: { type, ...style, image: "", alt: "", caption: "", layout: "wide" },
+    split: { type, ...style, eyebrow: "", title: "Rubrik", text: "Skriv din text har.", image: "", alt: "", imageSide: "right" },
+    cards: { type, ...style, eyebrow: "", title: "Kortsektion", cards: [{ title: "Kort 1", text: "Text" }, { title: "Kort 2", text: "Text" }, { title: "Kort 3", text: "Text" }] },
+    contact: { type, ...style, eyebrow: "Kontakt", title: "Kontakta mig", text: "Skriv en kort introduktion.", email: "din-epost@example.com" }
   };
   return templates[type] || templates.text;
 }
 
 function field(label, value, path, kind = "input", options = []) {
   const encoded = String(value || "").replaceAll('"', "&quot;");
+  if (kind === "color") {
+    return `<label>${label}<input data-path="${path}" type="color" value="${encoded || "#1f2933"}" /></label>`;
+  }
   if (kind === "textarea") {
     return `<label class="wide-field">${label}<textarea data-path="${path}" rows="4">${value || ""}</textarea></label>`;
   }
@@ -61,12 +65,20 @@ function field(label, value, path, kind = "input", options = []) {
     return `
       <label>${label}
         <select data-path="${path}">
-          ${options.map((option) => `<option value="${option}" ${option === value ? "selected" : ""}>${option}</option>`).join("")}
+          ${options.map((option) => `<option value="${option}" ${option === value ? "selected" : ""}>${option || "Standard"}</option>`).join("")}
         </select>
       </label>
     `;
   }
   return `<label>${label}<input data-path="${path}" value="${encoded}" /></label>`;
+}
+
+function styleFields(block, index) {
+  return [
+    field("Textfärg", block.textColor, `${index}.textColor`, "color"),
+    field("Rubrikstorlek", block.titleSize || "", `${index}.titleSize`, "select", ["", "2rem", "3rem", "4rem", "5rem", "6rem"]),
+    field("Textstorlek", block.bodySize || "", `${index}.bodySize`, "select", ["", "1rem", "1.15rem", "1.3rem", "1.5rem", "1.8rem"])
+  ].join("");
 }
 
 function cardFields(block, blockIndex) {
@@ -88,17 +100,19 @@ function cardFields(block, blockIndex) {
 function renderBlockFields(block, index) {
   if (block.type === "hero") {
     return [
+      styleFields(block, index),
       field("Etikett", block.eyebrow, `${index}.eyebrow`),
       field("Rubrik", block.title, `${index}.title`),
       field("Text", block.text, `${index}.text`, "textarea"),
       field("Bild-URL", block.image, `${index}.image`),
       field("Textplacering", block.align || "left", `${index}.align`, "select", ["left", "center"]),
       field("Knapptext", block.buttonText, `${index}.buttonText`),
-      field("Knapplank", block.buttonHref, `${index}.buttonHref`)
+      field("Knapplänk", block.buttonHref, `${index}.buttonHref`)
     ].join("");
   }
   if (block.type === "text") {
     return [
+      styleFields(block, index),
       field("Etikett", block.eyebrow, `${index}.eyebrow`),
       field("Rubrik", block.title, `${index}.title`),
       field("Layout", block.layout || "narrow", `${index}.layout`, "select", ["narrow", "wide"]),
@@ -107,6 +121,7 @@ function renderBlockFields(block, index) {
   }
   if (block.type === "image") {
     return [
+      styleFields(block, index),
       field("Bild-URL", block.image, `${index}.image`),
       field("Alt-text", block.alt, `${index}.alt`),
       field("Layout", block.layout || "wide", `${index}.layout`, "select", ["wide", "narrow"]),
@@ -115,6 +130,7 @@ function renderBlockFields(block, index) {
   }
   if (block.type === "split") {
     return [
+      styleFields(block, index),
       field("Etikett", block.eyebrow, `${index}.eyebrow`),
       field("Rubrik", block.title, `${index}.title`),
       field("Bild-URL", block.image, `${index}.image`),
@@ -124,10 +140,11 @@ function renderBlockFields(block, index) {
     ].join("");
   }
   if (block.type === "cards") {
-    return [field("Etikett", block.eyebrow, `${index}.eyebrow`), field("Rubrik", block.title, `${index}.title`), cardFields(block, index)].join("");
+    return [styleFields(block, index), field("Etikett", block.eyebrow, `${index}.eyebrow`), field("Rubrik", block.title, `${index}.title`), cardFields(block, index)].join("");
   }
   if (block.type === "contact") {
     return [
+      styleFields(block, index),
       field("Etikett", block.eyebrow, `${index}.eyebrow`),
       field("Rubrik", block.title, `${index}.title`),
       field("E-post", block.email, `${index}.email`),
@@ -171,7 +188,7 @@ function renderBlocks() {
           </div>
           <div class="block-fields">${renderBlockFields(block, index)}</div>
           <label class="wide-field upload-field">
-            Ladda upp bild till blocket
+            Ladda upp eller byt bild i blocket
             <input data-upload="${index}" type="file" accept="image/*" />
           </label>
         </article>
@@ -341,6 +358,12 @@ document.querySelector(".block-toolbar").addEventListener("click", (event) => {
 });
 
 blockList.addEventListener("input", async (event) => {
+  if (event.target.matches("[data-path]")) {
+    setByPath(event.target.dataset.path, event.target.value);
+  }
+});
+
+blockList.addEventListener("change", async (event) => {
   if (event.target.matches("[data-path]")) {
     setByPath(event.target.dataset.path, event.target.value);
   }

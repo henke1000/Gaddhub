@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="En snabb, gratisvanlig hemsida redo for GitHub, Vercel och Supabase."
+    />
+    <title>Min hemsida</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Till startsidan">Min hemsida</a>
+      <nav aria-label="Huvudmeny">
+        <a href="#om">Om</a>
+        <a href="#projekt">Projekt</a>
+        <a href="#kontakt">Kontakt</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">GitHub + Vercel + Supabase</p>
+          <h1 id="hero-title">En enkel hemsida som ar redo att publiceras.</h1>
+          <p>
+            Byt ut texten, lagg till dina bilder och koppla pa Supabase nar du
+            vill spara meddelanden, inloggningar eller innehall.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#kontakt">Kontakta mig</a>
+            <a class="button secondary" href="#projekt">Se innehall</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="om" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Startpunkt</p>
+          <h2>Bygg vidare i din egen takt.</h2>
+        </div>
+        <p>
+          Den har sidan ar statisk och kostar inget att hosta for ett vanligt
+          personligt projekt. Nar du behover databas, formulardata eller
+          inloggning passar Supabase bra som nasta lager.
+        </p>
+      </section>
+
+      <section id="projekt" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Innehall</p>
+          <h2>Tre block att anpassa.</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span>01</span>
+            <h3>Presentation</h3>
+            <p>Skriv vem du ar, vad du erbjuder eller vad sidan handlar om.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Projekt</h3>
+            <p>Visa exempel, bilder, produkter, tjanster eller nyheter.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Kontakt</h3>
+            <p>Koppla till e-post nu, eller till Supabase senare.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="kontakt" class="section contact-section">
+        <div class="section-heading">
+          <p class="eyebrow">Kontakt</p>
+          <h2>Redo for nasta steg.</h2>
+        </div>
+        <form class="contact-form" action="mailto:din-epost@example.com" method="post" enctype="text/plain">
+          <label>
+            Namn
+            <input name="namn" autocomplete="name" placeholder="Ditt namn" />
+          </label>
+          <label>
+            Meddelande
+            <textarea name="meddelande" rows="5" placeholder="Skriv nagot kort"></textarea>
+          </label>
+          <button type="submit">Skicka</button>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <p>Byggd for gratis publicering via GitHub och Vercel.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

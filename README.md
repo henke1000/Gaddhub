@@ -1,12 +1,17 @@
 # Min hemsida
 
-En enkel statisk hemsida som kan publiceras gratis via GitHub och Vercel for ett personligt projekt.
+En gratisvanlig hemsida med enkel adminpanel via Supabase, GitHub och Vercel.
 
 ## Filer
 
-- `index.html` - sidans innehall
+- `index.html` - publik hemsida
+- `admin.html` - adminpanel
 - `styles.css` - design och responsiv layout
-- `script.js` - liten interaktion
+- `admin.css` - adminlayout
+- `script.js` - laddar och renderar publicerade sidor
+- `admin.js` - redigerar sidor, meny, text, layout och bilder
+- `config.js` - Supabase-installningar
+- `supabase-schema.sql` - tabeller, RLS-regler och storage bucket
 
 ## Publicera med GitHub och Vercel
 
@@ -21,22 +26,48 @@ En enkel statisk hemsida som kan publiceras gratis via GitHub och Vercel for ett
    ```
 
 3. Ga till Vercel och importera GitHub-repositoryt.
-4. Vercel hittar automatiskt att detta ar en statisk sida. Lamna build command tomt och public directory som `.` om Vercel fragar.
+4. Valj Framework Preset `Other`.
+5. Lamna Build Command och Install Command tomma. Satt Output Directory till `.` om Vercel fragar.
 
-## Supabase som nasta steg
+## Supabase setup
 
-Anvand Supabase nar sidan ska spara data, till exempel kontaktformular, nyhetsbrev, inloggning eller ett enkelt adminlage.
+1. Skapa ett Supabase-projekt.
+2. Oppna SQL Editor i Supabase och kor innehaller i `supabase-schema.sql`.
+3. Skapa en adminanvandare i Supabase Authentication.
+4. Kor den sista kommenterade SQL-raden i `supabase-schema.sql` med din e-postadress.
+5. Oppna `config.js` och fyll i:
 
-Lagg aldrig hemliga nycklar i GitHub. For en publik statisk sida ska bara Supabase-projektets publika URL och publishable/anon key anvandas i webblasaren. Sakerheten ska sitta i Row Level Security-regler i databasen.
+   ```js
+   window.SITE_CONFIG = {
+     siteName: "Min hemsida",
+     supabaseUrl: "https://DITT-PROJEKT.supabase.co",
+     supabaseAnonKey: "DIN-PUBLIKA-PUBLISHABLE-ELLER-ANON-KEY",
+     assetBucket: "site-assets"
+   };
+   ```
 
-Ett vanligt nasta steg ar:
+Lagg aldrig in `service_role` eller secret keys i GitHub, Vercel eller frontendkod. Den har sidan ska bara anvanda den publika publishable/anon-nyckeln. Sakerheten ligger i Row Level Security-reglerna.
 
-1. Skapa ett gratis Supabase-projekt.
-2. Skapa en tabell for kontaktmeddelanden.
-3. Aktivera Row Level Security.
-4. Lagg till en INSERT-policy for publika meddelanden, men ingen SELECT-policy for publika besokare.
-5. Byt kontaktformularet fran `mailto:` till ett Supabase-anrop.
+## Admin
+
+Ga till `/admin.html` pa din publicerade sida.
+
+Du kan:
+
+- skapa sidor
+- andra menytext och menyordning
+- valja vilka sidor som syns i menyn
+- byta text och bilder
+- ladda upp bilder till Supabase Storage
+- flytta block upp och ned
+- byta enkla layoutinstallningar per block
 
 ## Lokalt test
 
-Eftersom sidan ar statisk kan du oppna `index.html` direkt i webblasaren.
+Starta en enkel lokal server:
+
+```bash
+python3 -m http.server 4173
+```
+
+Oppna sedan `http://localhost:4173`.

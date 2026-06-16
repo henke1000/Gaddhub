@@ -61,6 +61,11 @@ nav a:hover {
   color: var(--text);
 }
 
+nav a[aria-current="page"] {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
 .hero {
   min-height: calc(100vh - 68px);
   display: grid;
@@ -76,6 +81,11 @@ nav a:hover {
   max-width: 760px;
   color: #ffffff;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.28);
+}
+
+.hero-copy.center {
+  margin-inline: auto;
+  text-align: center;
 }
 
 .eyebrow {
@@ -157,6 +167,59 @@ button {
   font-size: clamp(2rem, 4vw, 4rem);
 }
 
+.text-section.wide > p,
+.text-section.wide .section-heading {
+  max-width: 1040px;
+}
+
+.image-section figure {
+  margin: 0;
+}
+
+.image-section.narrow figure {
+  max-width: 760px;
+}
+
+.image-section img,
+.split-section img,
+.card-image {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+}
+
+.image-section img {
+  max-height: 720px;
+  border-radius: 8px;
+}
+
+figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.split-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 0.8fr);
+  gap: clamp(24px, 6vw, 80px);
+  align-items: center;
+}
+
+.split-section.image-left img {
+  order: -1;
+}
+
+.split-section p,
+.contact-section .section-heading p {
+  color: var(--muted);
+  font-size: 1.08rem;
+}
+
+.split-section img {
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+}
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -180,6 +243,12 @@ button {
 
 .feature-grid h3 {
   margin: 28px 0 10px;
+}
+
+.card-image {
+  aspect-ratio: 16 / 10;
+  margin-bottom: 18px;
+  border-radius: 8px;
 }
 
 .feature-grid p {
@@ -227,8 +296,17 @@ textarea:focus {
 }
 
 footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 28px clamp(20px, 5vw, 72px);
   color: var(--muted);
+}
+
+footer a {
+  color: var(--accent-dark);
+  font-weight: 800;
 }
 
 @media (max-width: 760px) {
@@ -242,7 +320,12 @@ footer {
   }
 
   .feature-grid,
-  .contact-section {
+  .contact-section,
+  .split-section {
     grid-template-columns: 1fr;
+  }
+
+  .split-section.image-left img {
+    order: 0;
   }
 }

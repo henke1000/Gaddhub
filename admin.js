@@ -12,6 +12,7 @@ const pagePreview = document.querySelector("#page-preview");
 let supabaseClient;
 let pages = [];
 let currentPage = null;
+let savedAtTimer;
 const colorOptions = [
   { label: "Standard", value: "" },
   { label: "Svart", value: "#1f2933" },
@@ -67,10 +68,24 @@ function escapeAttr(value = "") {
 
 function formatSavedAt(value) {
   if (!value) return "Inte sparad ännu";
-  return `Senast sparad ${new Date(value).toLocaleString("sv-SE", {
+  const savedAt = new Date(value);
+  const seconds = Math.max(0, Math.floor((Date.now() - savedAt.getTime()) / 1000));
+  return `Senast sparad ${savedAt.toLocaleString("sv-SE", {
     dateStyle: "short",
-    timeStyle: "short"
-  })}`;
+    timeStyle: "medium"
+  })} (${seconds} sek sedan)`;
+}
+
+function updateSavedAt() {
+  if (lastSaved) {
+    lastSaved.textContent = formatSavedAt(currentPage?.updated_at);
+  }
+}
+
+function startSavedAtTimer() {
+  window.clearInterval(savedAtTimer);
+  updateSavedAt();
+  savedAtTimer = window.setInterval(updateSavedAt, 1000);
 }
 
 function blockTemplate(type) {
@@ -229,7 +244,7 @@ function fillPageForm() {
   document.querySelector("#page-is-home").checked = Boolean(currentPage?.is_home);
   document.querySelector("#page-status").value = currentPage?.status || "draft";
   editorTitle.textContent = currentPage?.title || "Ny sida";
-  lastSaved.textContent = formatSavedAt(currentPage?.updated_at);
+  startSavedAtTimer();
 }
 
 function renderPageList() {
@@ -264,41 +279,172 @@ function renderBlocks() {
     .join("");
 }
 
-function previewBlock(block) {
-  const title = escapeHtml(block.title || block.type);
-  const text = escapeHtml(block.text || block.caption || "");
-  const color = block.textColor ? ` style="color:${escapeAttr(block.textColor)}"` : "";
-  const image = block.image
-    ? `<img src="${escapeAttr(block.image)}" alt="">`
-    : `<div class="preview-empty">Ingen bild vald</div>`;
+function styleValue(value = "") {
+  const safe = String(value).trim();
+  return /^[#a-zA-Z0-9(),. %/-]+$/.test(safe) ? safe : "";
+}
 
-  if (block.type === "hero") {
-    return `<article class="preview-block preview-hero"${color}>${image}<h3>${title}</h3><p>${text}</p></article>`;
-  }
-  if (block.type === "image") {
-    return `<article class="preview-block">${image}<p${color}>${escapeHtml(block.caption || "Bildblock")}</p></article>`;
-  }
-  if (block.type === "split") {
-    return `<article class="preview-block preview-split"${color}><div><h3>${title}</h3><p>${text}</p></div>${image}</article>`;
-  }
-  if (block.type === "cards") {
-    const cards = Array.isArray(block.cards) ? block.cards : [];
-    return `<article class="preview-block"${color}><h3>${title}</h3><div class="preview-cards">${cards.map((card) => `<span>${escapeHtml(card.title || "Kort")}</span>`).join("")}</div></article>`;
-  }
-  if (block.type === "contact") {
-    return `<article class="preview-block"${color}><h3>${title}</h3><p>${text}</p><strong>${escapeHtml(block.email || "Ingen e-post")}</strong></article>`;
-  }
-  return `<article class="preview-block"${color}><h3>${title}</h3><p>${text}</p></article>`;
+function sectionStyle(section) {
+  const styles = [];
+  const textColor = styleValue(section.textColor);
+  const titleSize = styleValue(section.titleSize);
+  const bodySize = styleValue(section.bodySize);
+  if (textColor) styles.push(`--section-text-color: ${textColor}`);
+  if (titleSize) styles.push(`--section-title-size: ${titleSize}`);
+  if (bodySize) styles.push(`--section-body-size: ${bodySize}`);
+  return styles.length ? ` style="${styles.join("; ")}"` : "";
+}
+
+function renderPreviewHero(section) {
+  const image = section.image || "";
+  const customStyles = sectionStyle(section).replace(/^ style="/, "").replace(/"$/, "");
+  const background = image ? `background-image: linear-gradient(rgba(31,41,51,.28), rgba(31,41,51,.34)), url('${escapeAttr(image)}')` : "";
+  const styleParts = [background, customStyles].filter(Boolean).join("; ");
+  const style = styleParts ? ` style="${styleParts}"` : "";
+  const button = section.buttonText
+    ? `<a class="button primary" href="${escapeAttr(section.buttonHref || "#")}">${escapeHtml(section.buttonText)}</a>`
+    : "";
+
+  return `
+    <section class="hero cms-hero custom-text"${style}>
+      <div class="hero-copy ${escapeAttr(section.align || "left")}">
+        ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
+        <h1>${escapeHtml(section.title || "")}</h1>
+        ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
+        ${button ? `<div class="hero-actions">${button}</div>` : ""}
+      </div>
+    </section>
+  `;
+}
+
+function renderPreviewText(section) {
+  return `
+    <section class="section text-section custom-text ${escapeAttr(section.layout || "narrow")}"${sectionStyle(section)}>
+      <div class="section-heading">
+        ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
+        <h2>${escapeHtml(section.title || "")}</h2>
+      </div>
+      ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
+    </section>
+  `;
+}
+
+function renderPreviewImage(section) {
+  const image = section.image
+    ? `<img src="${escapeAttr(section.image)}" alt="${escapeAttr(section.alt || "")}" loading="lazy" />`
+    : `<div class="image-placeholder">Ingen bild vald</div>`;
+  return `
+    <section class="section image-section custom-text ${escapeAttr(section.layout || "wide")}"${sectionStyle(section)}>
+      <figure>
+        ${image}
+        ${section.caption ? `<figcaption>${escapeHtml(section.caption)}</figcaption>` : ""}
+      </figure>
+    </section>
+  `;
+}
+
+function renderPreviewSplit(section) {
+  const image = section.image
+    ? `<img src="${escapeAttr(section.image)}" alt="${escapeAttr(section.alt || "")}" loading="lazy" />`
+    : `<div class="image-placeholder">Ingen bild vald</div>`;
+  return `
+    <section class="section split-section custom-text ${section.imageSide === "left" ? "image-left" : ""}"${sectionStyle(section)}>
+      <div>
+        ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
+        <h2>${escapeHtml(section.title || "")}</h2>
+        ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
+      </div>
+      ${image}
+    </section>
+  `;
+}
+
+function renderPreviewCards(section) {
+  const cards = Array.isArray(section.cards) ? section.cards : [];
+  return `
+    <section class="section custom-text"${sectionStyle(section)}>
+      <div class="section-heading">
+        ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
+        <h2>${escapeHtml(section.title || "")}</h2>
+      </div>
+      <div class="feature-grid">
+        ${cards
+          .map(
+            (card, index) => `
+              <article>
+                <span>${String(index + 1).padStart(2, "0")}</span>
+                ${card.image ? `<img class="card-image" src="${escapeAttr(card.image)}" alt="">` : ""}
+                <h3>${escapeHtml(card.title || "")}</h3>
+                <p>${escapeHtml(card.text || "")}</p>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderPreviewContact(section) {
+  const email = escapeHtml(section.email || "");
+  const emailHref = email ? `mailto:${email}` : "#";
+  return `
+    <section class="section contact-section custom-text"${sectionStyle(section)}>
+      <div class="section-heading">
+        ${section.eyebrow ? `<p class="eyebrow">${escapeHtml(section.eyebrow)}</p>` : ""}
+        <h2>${escapeHtml(section.title || "Kontakt")}</h2>
+        ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
+      </div>
+      <div class="contact-card">
+        <p>${email || "Lägg in din e-postadress i adminpanelen."}</p>
+        <div class="hero-actions">
+          ${email ? `<a class="button primary" href="${emailHref}">Öppna e-post</a>` : ""}
+          ${email ? `<button class="button secondary" type="button">Kopiera e-post</button>` : ""}
+        </div>
+        <p class="small-note">Kontaktblocket skickar inte via server. Det visar din e-post och låter besökaren kopiera den.</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderPreviewSection(section) {
+  const renderers = {
+    hero: renderPreviewHero,
+    text: renderPreviewText,
+    image: renderPreviewImage,
+    split: renderPreviewSplit,
+    cards: renderPreviewCards,
+    contact: renderPreviewContact
+  };
+  return (renderers[section.type] || renderPreviewText)(section);
 }
 
 function renderPreview() {
   if (!pagePreview || !currentPage) return;
-  pagePreview.innerHTML = `
-    <div class="preview-page-title">
-      <strong>${escapeHtml(currentPage.title || "Ny sida")}</strong>
-      <span>${escapeHtml(currentPage.status || "draft")}</span>
-    </div>
-    ${(currentPage.sections || []).map(previewBlock).join("")}
+  const navLinks = pages
+    .filter((page) => page.in_menu)
+    .sort((a, b) => Number(a.nav_order || 0) - Number(b.nav_order || 0))
+    .map((page) => `<a href="#">${escapeHtml(page.nav_label || page.title)}</a>`)
+    .join("");
+  const body = (currentPage.sections || []).map(renderPreviewSection).join("");
+  pagePreview.srcdoc = `
+    <!doctype html>
+    <html lang="sv">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <base href="${escapeAttr(window.location.href.replace(/admin\.html.*$/, ""))}">
+        <link rel="stylesheet" href="styles.css">
+      </head>
+      <body>
+        <header class="site-header">
+          <a class="brand" href="#">${escapeHtml(config.siteName || "Min hemsida")}</a>
+          <nav aria-label="Huvudmeny">${navLinks}</nav>
+        </header>
+        <main>${body}</main>
+        <footer><p>Byggd med GitHub, Vercel och Supabase.</p><a href="#">Admin</a></footer>
+      </body>
+    </html>
   `;
 }
 
@@ -543,14 +689,20 @@ blockList.addEventListener("click", (event) => {
   if (!blockEl || !currentPage) return;
   const index = Number(blockEl.dataset.blockIndex);
   const blocks = currentPage.sections;
+  const shouldDelete = event.target.closest("[data-delete-block]");
+  const moveDirection = event.target.dataset.move;
 
-  if (event.target.closest("[data-delete-block]")) {
+  if (!shouldDelete && !moveDirection) {
+    return;
+  }
+
+  if (shouldDelete) {
     blocks.splice(index, 1);
   }
-  if (event.target.dataset.move === "up" && index > 0) {
+  if (moveDirection === "up" && index > 0) {
     [blocks[index - 1], blocks[index]] = [blocks[index], blocks[index - 1]];
   }
-  if (event.target.dataset.move === "down" && index < blocks.length - 1) {
+  if (moveDirection === "down" && index < blocks.length - 1) {
     [blocks[index + 1], blocks[index]] = [blocks[index], blocks[index + 1]];
   }
   renderBlocks();

@@ -125,10 +125,13 @@ function renderText(section) {
 }
 
 function renderImage(section) {
+  const image = section.image
+    ? `<img src="${escapeHtml(section.image)}" alt="${escapeHtml(section.alt || "")}" loading="lazy" />`
+    : `<div class="image-placeholder">Ingen bild vald</div>`;
   return `
     <section class="section image-section custom-text ${escapeHtml(section.layout || "wide")}"${sectionStyle(section)}>
       <figure>
-        <img src="${escapeHtml(section.image || "")}" alt="${escapeHtml(section.alt || "")}" />
+        ${image}
         ${section.caption ? `<figcaption>${escapeHtml(section.caption)}</figcaption>` : ""}
       </figure>
     </section>
@@ -136,6 +139,9 @@ function renderImage(section) {
 }
 
 function renderSplit(section) {
+  const image = section.image
+    ? `<img src="${escapeHtml(section.image)}" alt="${escapeHtml(section.alt || "")}" loading="lazy" />`
+    : `<div class="image-placeholder">Ingen bild vald</div>`;
   return `
     <section class="section split-section custom-text ${section.imageSide === "left" ? "image-left" : ""}"${sectionStyle(section)}>
       <div>
@@ -143,7 +149,7 @@ function renderSplit(section) {
         <h2>${escapeHtml(section.title || "")}</h2>
         ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
       </div>
-      <img src="${escapeHtml(section.image || "")}" alt="${escapeHtml(section.alt || "")}" />
+      ${image}
     </section>
   `;
 }
@@ -175,6 +181,8 @@ function renderCards(section) {
 }
 
 function renderContact(section) {
+  const email = escapeHtml(section.email || "");
+  const emailHref = email ? `mailto:${email}` : "#";
   return `
     <section class="section contact-section custom-text"${sectionStyle(section)}>
       <div class="section-heading">
@@ -182,11 +190,14 @@ function renderContact(section) {
         <h2>${escapeHtml(section.title || "Kontakt")}</h2>
         ${section.text ? `<p>${escapeHtml(section.text)}</p>` : ""}
       </div>
-      <form class="contact-form" action="mailto:${escapeHtml(section.email || "din-epost@example.com")}" method="post" enctype="text/plain">
-        <label>Namn<input name="namn" autocomplete="name" placeholder="Ditt namn" /></label>
-        <label>Meddelande<textarea name="meddelande" rows="5" placeholder="Skriv nagot kort"></textarea></label>
-        <button type="submit">Skicka</button>
-      </form>
+      <div class="contact-card">
+        <p>${email || "Lägg in din e-postadress i adminpanelen."}</p>
+        <div class="hero-actions">
+          ${email ? `<a class="button primary" href="${emailHref}">Öppna e-post</a>` : ""}
+          ${email ? `<button class="button secondary" data-copy-email="${email}" type="button">Kopiera e-post</button>` : ""}
+        </div>
+        <p class="small-note">Kontaktblocket skickar inte via server. Det visar din e-post och låter besökaren kopiera den.</p>
+      </div>
     </section>
   `;
 }
@@ -245,3 +256,14 @@ async function init() {
 }
 
 init();
+
+root.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy-email]");
+  if (!button) return;
+  try {
+    await navigator.clipboard.writeText(button.dataset.copyEmail);
+    button.textContent = "Kopierad";
+  } catch {
+    button.textContent = button.dataset.copyEmail;
+  }
+});

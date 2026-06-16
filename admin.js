@@ -6,10 +6,22 @@ const adminView = document.querySelector("#admin-view");
 const pageList = document.querySelector("#page-list");
 const blockList = document.querySelector("#block-list");
 const editorTitle = document.querySelector("#editor-title");
+const lastSaved = document.querySelector("#last-saved");
+const pagePreview = document.querySelector("#page-preview");
 
 let supabaseClient;
 let pages = [];
 let currentPage = null;
+const colorOptions = [
+  { label: "Standard", value: "" },
+  { label: "Svart", value: "#1f2933" },
+  { label: "Vit", value: "#ffffff" },
+  { label: "Grå", value: "#667085" },
+  { label: "Blå", value: "#2563eb" },
+  { label: "Grön", value: "#0f766e" },
+  { label: "Röd", value: "#dc2626" },
+  { label: "Orange", value: "#f97316" }
+];
 
 function setStatus(message) {
   statusEl.textContent = message || "";
@@ -40,6 +52,27 @@ function slugify(value) {
     .slice(0, 64);
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(value = "") {
+  return escapeHtml(value);
+}
+
+function formatSavedAt(value) {
+  if (!value) return "Inte sparad ännu";
+  return `Senast sparad ${new Date(value).toLocaleString("sv-SE", {
+    dateStyle: "short",
+    timeStyle: "short"
+  })}`;
+}
+
 function blockTemplate(type) {
   const style = { textColor: "", titleSize: "", bodySize: "" };
   const templates = {
@@ -54,28 +87,61 @@ function blockTemplate(type) {
 }
 
 function field(label, value, path, kind = "input", options = []) {
-  const encoded = String(value || "").replaceAll('"', "&quot;");
-  if (kind === "color") {
-    return `<label>${label}<input data-path="${path}" type="color" value="${encoded || "#1f2933"}" /></label>`;
+  const encoded = escapeAttr(value || "");
+  const id = `field-${path.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  if (kind === "palette") {
+    return `
+      <div class="field-row wide-field">
+        <span class="field-label">${label}</span>
+        <div class="color-palette" role="group" aria-label="${escapeAttr(label)}">
+          ${colorOptions
+            .map(
+              (color) => `
+                <button
+                  class="${color.value === (value || "") ? "is-selected" : ""}"
+                  data-color-path="${path}"
+                  data-color-value="${escapeAttr(color.value)}"
+                  type="button"
+                >
+                  <span style="background:${color.value || "linear-gradient(135deg,#fff 0%,#fff 48%,#d1d5db 49%,#d1d5db 52%,#fff 53%)"}"></span>
+                  ${color.label}
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
   }
   if (kind === "textarea") {
-    return `<label class="wide-field">${label}<textarea data-path="${path}" rows="4">${value || ""}</textarea></label>`;
+    return `
+      <div class="field-row wide-field">
+        <label for="${id}">${label}</label>
+        <textarea id="${id}" data-path="${path}" rows="4">${escapeHtml(value || "")}</textarea>
+      </div>
+    `;
   }
   if (kind === "select") {
     return `
-      <label>${label}
-        <select data-path="${path}">
+      <div class="field-row">
+        <label for="${id}">${label}</label>
+        <select id="${id}" data-path="${path}">
           ${options.map((option) => `<option value="${option}" ${option === value ? "selected" : ""}>${option || "Standard"}</option>`).join("")}
         </select>
-      </label>
+      </div>
     `;
   }
-  return `<label>${label}<input data-path="${path}" value="${encoded}" /></label>`;
+  return `
+    <div class="field-row">
+      <label for="${id}">${label}</label>
+      <input id="${id}" data-path="${path}" value="${encoded}" />
+    </div>
+  `;
 }
 
 function styleFields(block, index) {
   return [
-    field("Textfärg", block.textColor, `${index}.textColor`, "color"),
+    field("Textfärg", block.textColor || "", `${index}.textColor`, "palette"),
     field("Rubrikstorlek", block.titleSize || "", `${index}.titleSize`, "select", ["", "2rem", "3rem", "4rem", "5rem", "6rem"]),
     field("Textstorlek", block.bodySize || "", `${index}.bodySize`, "select", ["", "1rem", "1.15rem", "1.3rem", "1.5rem", "1.8rem"])
   ].join("");
@@ -163,6 +229,7 @@ function fillPageForm() {
   document.querySelector("#page-is-home").checked = Boolean(currentPage?.is_home);
   document.querySelector("#page-status").value = currentPage?.status || "draft";
   editorTitle.textContent = currentPage?.title || "Ny sida";
+  lastSaved.textContent = formatSavedAt(currentPage?.updated_at);
 }
 
 function renderPageList() {
@@ -197,10 +264,49 @@ function renderBlocks() {
     .join("");
 }
 
+function previewBlock(block) {
+  const title = escapeHtml(block.title || block.type);
+  const text = escapeHtml(block.text || block.caption || "");
+  const color = block.textColor ? ` style="color:${escapeAttr(block.textColor)}"` : "";
+  const image = block.image
+    ? `<img src="${escapeAttr(block.image)}" alt="">`
+    : `<div class="preview-empty">Ingen bild vald</div>`;
+
+  if (block.type === "hero") {
+    return `<article class="preview-block preview-hero"${color}>${image}<h3>${title}</h3><p>${text}</p></article>`;
+  }
+  if (block.type === "image") {
+    return `<article class="preview-block">${image}<p${color}>${escapeHtml(block.caption || "Bildblock")}</p></article>`;
+  }
+  if (block.type === "split") {
+    return `<article class="preview-block preview-split"${color}><div><h3>${title}</h3><p>${text}</p></div>${image}</article>`;
+  }
+  if (block.type === "cards") {
+    const cards = Array.isArray(block.cards) ? block.cards : [];
+    return `<article class="preview-block"${color}><h3>${title}</h3><div class="preview-cards">${cards.map((card) => `<span>${escapeHtml(card.title || "Kort")}</span>`).join("")}</div></article>`;
+  }
+  if (block.type === "contact") {
+    return `<article class="preview-block"${color}><h3>${title}</h3><p>${text}</p><strong>${escapeHtml(block.email || "Ingen e-post")}</strong></article>`;
+  }
+  return `<article class="preview-block"${color}><h3>${title}</h3><p>${text}</p></article>`;
+}
+
+function renderPreview() {
+  if (!pagePreview || !currentPage) return;
+  pagePreview.innerHTML = `
+    <div class="preview-page-title">
+      <strong>${escapeHtml(currentPage.title || "Ny sida")}</strong>
+      <span>${escapeHtml(currentPage.status || "draft")}</span>
+    </div>
+    ${(currentPage.sections || []).map(previewBlock).join("")}
+  `;
+}
+
 function refreshEditor() {
   fillPageForm();
   renderPageList();
   renderBlocks();
+  renderPreview();
 }
 
 function setByPath(path, value) {
@@ -215,7 +321,7 @@ function setByPath(path, value) {
 async function loadPages() {
   const { data, error } = await db()
     .from("site_pages")
-    .select("id,slug,title,nav_label,nav_order,in_menu,is_home,status,sections")
+    .select("id,slug,title,nav_label,nav_order,in_menu,is_home,status,sections,updated_at")
     .order("nav_order", { ascending: true });
   if (error) throw error;
   pages = data || [];
@@ -267,15 +373,42 @@ async function savePage() {
 async function uploadImage(input, blockIndex) {
   const file = input.files?.[0];
   if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Välj en bildfil.");
+  }
   setStatus("Laddar upp bild...");
   const extension = file.name.split(".").pop() || "jpg";
   const path = `${crypto.randomUUID()}.${extension}`;
-  const { error } = await db().storage.from(config.assetBucket || "site-assets").upload(path, file, { upsert: false });
-  if (error) throw error;
-  const { data } = db().storage.from(config.assetBucket || "site-assets").getPublicUrl(path);
-  currentPage.sections[blockIndex].image = data.publicUrl;
+
+  const embedImage = async () => {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Kunde inte läsa bildfilen."));
+      reader.readAsDataURL(file);
+    });
+    currentPage.sections[blockIndex].image = dataUrl;
+    renderBlocks();
+    renderPreview();
+    setStatus("Supabase Storage stoppade uppladdningen, så bilden bäddades in direkt. Klicka Spara.");
+  };
+
+  try {
+    const upload = await db().storage.from(config.assetBucket || "site-assets").upload(path, file, { upsert: false });
+    if (upload.error) {
+      await embedImage();
+      return;
+    }
+    const { data } = db().storage.from(config.assetBucket || "site-assets").getPublicUrl(path);
+    currentPage.sections[blockIndex].image = data.publicUrl;
+  } catch {
+    await embedImage();
+    return;
+  }
+
   renderBlocks();
-  setStatus("Bild uppladdad. Klicka Spara for att publicera andringen.");
+  renderPreview();
+  setStatus("Bild uppladdad. Klicka Spara för att publicera ändringen.");
 }
 
 async function init() {
@@ -338,6 +471,25 @@ document.querySelector("#page-title").addEventListener("input", (event) => {
   if (!document.querySelector("#page-slug").value) {
     document.querySelector("#page-slug").value = slugify(event.target.value);
   }
+  if (currentPage) {
+    currentPage.title = event.target.value;
+    editorTitle.textContent = currentPage.title || "Ny sida";
+    renderPreview();
+  }
+});
+
+document.querySelector("#page-form").addEventListener("input", () => {
+  if (!currentPage) return;
+  readPageForm();
+  renderPageList();
+  renderPreview();
+});
+
+document.querySelector("#page-form").addEventListener("change", () => {
+  if (!currentPage) return;
+  readPageForm();
+  renderPageList();
+  renderPreview();
 });
 
 document.querySelector("#save-page-button").addEventListener("click", async () => {
@@ -360,12 +512,14 @@ document.querySelector(".block-toolbar").addEventListener("click", (event) => {
 blockList.addEventListener("input", async (event) => {
   if (event.target.matches("[data-path]")) {
     setByPath(event.target.dataset.path, event.target.value);
+    renderPreview();
   }
 });
 
 blockList.addEventListener("change", async (event) => {
   if (event.target.matches("[data-path]")) {
     setByPath(event.target.dataset.path, event.target.value);
+    renderPreview();
   }
   if (event.target.matches("[data-upload]")) {
     try {
@@ -377,6 +531,14 @@ blockList.addEventListener("change", async (event) => {
 });
 
 blockList.addEventListener("click", (event) => {
+  const colorButton = event.target.closest("[data-color-path]");
+  if (colorButton && currentPage) {
+    setByPath(colorButton.dataset.colorPath, colorButton.dataset.colorValue);
+    renderBlocks();
+    renderPreview();
+    return;
+  }
+
   const blockEl = event.target.closest("[data-block-index]");
   if (!blockEl || !currentPage) return;
   const index = Number(blockEl.dataset.blockIndex);
@@ -392,6 +554,7 @@ blockList.addEventListener("click", (event) => {
     [blocks[index + 1], blocks[index]] = [blocks[index], blocks[index + 1]];
   }
   renderBlocks();
+  renderPreview();
 });
 
 init();

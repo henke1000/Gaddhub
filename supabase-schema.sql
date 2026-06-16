@@ -144,6 +144,13 @@ set public = excluded.public,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "Anyone can read site assets" on storage.objects;
+create policy "Anyone can read site assets"
+on storage.objects
+for select
+to anon, authenticated
+using (bucket_id = 'site-assets');
+
 drop policy if exists "Admins can upload site assets" on storage.objects;
 create policy "Admins can upload site assets"
 on storage.objects

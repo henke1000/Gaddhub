@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin | Min hemsida</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body class="admin-body">
+    <main class="admin-shell">
+      <section class="admin-login" id="login-view">
+        <p class="eyebrow">Admin</p>
+        <h1>Logga in</h1>
+        <form id="login-form">
+          <label>
+            E-post
+            <input id="login-email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Lösenord
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <button type="submit">Logga in</button>
+          <p class="status-text" id="login-status"></p>
+        </form>
+      </section>
+
+      <section class="admin-app" id="admin-view" hidden>
+        <aside class="admin-sidebar">
+          <div>
+            <p class="eyebrow">Sidor</p>
+            <h1>Admin</h1>
+          </div>
+          <button id="new-page-button" type="button">Ny sida</button>
+          <div id="page-list" class="page-list"></div>
+          <button id="logout-button" class="ghost-button" type="button">Logga ut</button>
+        </aside>
+
+        <section class="editor-panel">
+          <div class="editor-toolbar">
+            <div>
+              <p class="eyebrow">Redigera</p>
+              <h2 id="editor-title">Välj en sida</h2>
+            </div>
+            <div class="toolbar-actions">
+              <a class="button secondary" href="/" target="_blank" rel="noreferrer">Visa hemsida</a>
+              <button id="save-page-button" type="button">Spara</button>
+            </div>
+          </div>
+
+          <form id="page-form" class="page-form">
+            <div class="form-grid">
+              <label>
+                Sidtitel
+                <input id="page-title" required />
+              </label>
+              <label>
+                Slug
+                <input id="page-slug" required />
+              </label>
+              <label>
+                Menytext
+                <input id="page-nav-label" />
+              </label>
+              <label>
+                Menyordning
+                <input id="page-nav-order" type="number" value="0" />
+              </label>
+              <label class="checkbox-label">
+                <input id="page-in-menu" type="checkbox" />
+                Visa i meny
+              </label>
+              <label class="checkbox-label">
+                <input id="page-is-home" type="checkbox" />
+                Startsida
+              </label>
+              <label>
+                Status
+                <select id="page-status">
+                  <option value="published">Publicerad</option>
+                  <option value="draft">Utkast</option>
+                </select>
+              </label>
+            </div>
+          </form>
+
+          <div class="block-toolbar">
+            <button data-add-block="hero" type="button">Hero</button>
+            <button data-add-block="text" type="button">Text</button>
+            <button data-add-block="image" type="button">Bild</button>
+            <button data-add-block="split" type="button">Text + bild</button>
+            <button data-add-block="cards" type="button">Kort</button>
+            <button data-add-block="contact" type="button">Kontakt</button>
+          </div>
+
+          <div id="block-list" class="block-list"></div>
+          <p class="status-text" id="admin-status"></p>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>
